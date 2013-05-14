@@ -115,7 +115,11 @@
   "Builds the `find' command used to locate all project files & directories."
   "Path is the base directory to recurse from."
   "Ignored-globs is an alist with keys 'directories and 'files."
-  (labels ((name-matcher (glob)
+  (labels ((type-abbrev (assoc-type)
+             (case assoc-type
+               ('directories "d")
+               ('files "f")))
+           (name-matcher (glob)
              (mapconcat 'identity
                         `("-name" ,(shell-quote-argument glob))
                         " "))
@@ -127,26 +131,24 @@
                                       " -o ")
                           ,(shell-quote-argument ")"))
                         " "))
-           (matcher (assoc-type find-type)
+           (matcher (assoc-type)
              (mapconcat 'identity
                         `(,(shell-quote-argument "(")
                           "-type"
-                          ,find-type
+                          ,(type-abbrev assoc-type)
                           ,(grouped-name-matchers assoc-type)
                           ,(shell-quote-argument ")"))
                         " ")))
     (mapconcat 'identity
                `("find"
                  ,(shell-quote-argument (directory-file-name path))
-                 ,(matcher 'directories "d")
+                 ,(matcher 'directories)
                  "-prune"
                  "-o"
                  "-not"
-                 ,(matcher 'files "f")
+                 ,(matcher 'files)
                  "-type"
-                 ,(case type
-                    ('directories "d")
-                    ('files "f"))
+                 ,(type-abbrev type)
                  "-print")
                " ")))
 
