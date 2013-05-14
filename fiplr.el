@@ -56,12 +56,24 @@
 (defvar *fiplr-default-root-markers*
   '(".git" ".svn" ".hg" ".bzr"))
 
+;; The default set of patterns to exclude from searches.
+(defvar *fiplr-default-ignored-globs*
+  '((directories (".git" ".svn" ".hg" ".bzr"))
+    (files (".#*" "*.so"))))
+
 ;; Settings for project root directories.
 (defcustom fiplr-root-markers *fiplr-default-root-markers*
   "A list of files or directories that are found at the root of a project."
   :type    'list
   :group   'fiplr
   :options *fiplr-default-root-markers*)
+
+;; Settings for files and directories that should be ignored.
+(defcustom fiplr-ignored-globs *fiplr-default-ignored-globs*
+  "An alist of glob patterns to exclude from search results."
+  :type    'alist
+  :group   'fiplr
+  :options *fiplr-default-ignored-globs*)
 
 ;;; --- Public Functions
 
@@ -97,3 +109,54 @@
     (member-if (lambda (marker)
                  (file-exists-p (concat dir marker)))
                root-markers)))
+
+;; Builds a gigantic `find' shell command with -prune, -o, -not and shit.
+(defun fiplr-list-files-shell-command (type path ignored-globs)
+  "Builds the `find' command used to locate all project files & directories."
+  "Path is the base directory to recurse from."
+  "Ignored-globs is an alist with keys 'directories and 'files."
+  (labels ((name-matcher (glob)
+             (mapconcat 'identity
+                        `("-name" ,(shell-quote-argument glob))
+                        " "))
+           (grouped-name-matchers (type)
+             (mapconcat 'identity
+                        `(,(shell-quote-argument "(")
+                          ,(mapconcat #'name-matcher
+                                      (cadr (assoc type ignored-globs))
+                                      " -o ")
+                          ,(shell-quote-argument ")"))
+                        " "))
+           (matcher (assoc-type find-type)
+             (mapconcat 'identity
+                        `(,(shell-quote-argument "(")
+                          "-type"
+                          ,find-type
+                          ,(grouped-name-matchers assoc-type)
+                          ,(shell-quote-argument ")"))
+                        " ")))
+    (mapconcat 'identity
+               `("find"
+                 ,(shell-quote-argument (directory-file-name path))
+                 ,(matcher 'directories "d")
+                 "-prune"
+                 "-o"
+                 "-not"
+                 ,(matcher 'files "f")
+                 "-type"
+                 ,(case type
+                    ('directories "d")
+                    ('files "f"))
+                 "-print")
+               " ")))
+
+;; List all files found under the given path, ignoring ignored-globs.
+(defun fiplr-list-files (type path ignored-globs)
+  "Expands to a flat list of files/directories found under path."
+  "The first parameter - type - is the symbol 'directories or 'files."
+  (let* ((list-string
+          (shell-command-to-string (fiplr-list-files-shell-command
+                                    type
+                                    path
+                                    ignored-globs))))
+    (split-string list-string "[\r\n]+" t)))
