@@ -61,17 +61,21 @@
   '((directories (".git" ".svn" ".hg" ".bzr"))
     (files (".#*" "*.so"))))
 
+;; Customization group declaration.
+(defgroup fiplr nil
+  "Configuration options for fiplr - find in project.")
+
 ;; Settings for project root directories.
 (defcustom fiplr-root-markers *fiplr-default-root-markers*
   "A list of files or directories that are found at the root of a project."
-  :type    'list
+  :type    '(repeat string)
   :group   'fiplr
   :options *fiplr-default-root-markers*)
 
 ;; Settings for files and directories that should be ignored.
 (defcustom fiplr-ignored-globs *fiplr-default-ignored-globs*
   "An alist of glob patterns to exclude from search results."
-  :type    'alist
+  :type    '(alist :key-type symbol :value-type (repeat string))
   :group   'fiplr
   :options *fiplr-default-ignored-globs*)
 
@@ -99,8 +103,8 @@
          (system-root-dir (expand-file-name "/")))
     (cond
      ((fiplr-root-p path root-markers) this-dir)
-     ((eq system-root-dir this-dir) nil)
-     (t (fiplr-find-root parent-dir)))))
+     ((equal system-root-dir this-dir) nil)
+     (t (fiplr-find-root parent-dir root-markers)))))
 
 ;; Predicate looking at path for a root marker.
 (defun fiplr-root-p (path root-markers)
@@ -112,33 +116,33 @@
 
 ;; Builds a gigantic `find' shell command with -prune, -o, -not and shit.
 (defun fiplr-list-files-shell-command (type path ignored-globs)
-  "Builds the `find' command used to locate all project files & directories."
+  "Builds the `find' command to locate all project files & directories."
   "Path is the base directory to recurse from."
   "Ignored-globs is an alist with keys 'directories and 'files."
-  (labels ((type-abbrev (assoc-type)
-             (case assoc-type
-               ('directories "d")
-               ('files "f")))
-           (name-matcher (glob)
-             (mapconcat 'identity
-                        `("-name" ,(shell-quote-argument glob))
-                        " "))
-           (grouped-name-matchers (type)
-             (mapconcat 'identity
-                        `(,(shell-quote-argument "(")
-                          ,(mapconcat #'name-matcher
+  (cl-labels ((type-abbrev (assoc-type)
+                (case assoc-type
+                  ('directories "d")
+                  ('files "f")))
+              (name-matcher (glob)
+                (mapconcat 'identity
+                           `("-name" ,(shell-quote-argument glob))
+                           " "))
+              (grouped-name-matchers (type)
+                (mapconcat 'identity
+                           `(,(shell-quote-argument "(")
+                             ,(mapconcat #'name-matcher
                                       (cadr (assoc type ignored-globs))
                                       " -o ")
-                          ,(shell-quote-argument ")"))
-                        " "))
-           (matcher (assoc-type)
-             (mapconcat 'identity
-                        `(,(shell-quote-argument "(")
-                          "-type"
-                          ,(type-abbrev assoc-type)
-                          ,(grouped-name-matchers assoc-type)
-                          ,(shell-quote-argument ")"))
-                        " ")))
+                             ,(shell-quote-argument ")"))
+                           " "))
+              (matcher (assoc-type)
+                (mapconcat 'identity
+                           `(,(shell-quote-argument "(")
+                             "-type"
+                             ,(type-abbrev assoc-type)
+                             ,(grouped-name-matchers assoc-type)
+                             ,(shell-quote-argument ")"))
+                           " ")))
     (mapconcat 'identity
                `("find"
                  ,(shell-quote-argument (directory-file-name path))
@@ -156,9 +160,13 @@
 (defun fiplr-list-files (type path ignored-globs)
   "Expands to a flat list of files/directories found under path."
   "The first parameter - type - is the symbol 'directories or 'files."
-  (let* ((list-string
-          (shell-command-to-string (fiplr-list-files-shell-command
-                                    type
-                                    path
-                                    ignored-globs))))
+  (let ((list-string
+         (shell-command-to-string (fiplr-list-files-shell-command
+                                   type
+                                   path
+                                   ignored-globs))))
     (split-string list-string "[\r\n]+" t)))
+
+;;; --- Package Export
+
+(provide 'fiplr)
