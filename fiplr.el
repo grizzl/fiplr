@@ -110,9 +110,9 @@
 (defun fiplr-root-p (path root-markers)
   "Predicate to check if the given directory is a project root."
   (let ((dir (file-name-as-directory path)))
-    (member-if (lambda (marker)
-                 (file-exists-p (concat dir marker)))
-               root-markers)))
+    (cl-member-if (lambda (marker)
+                    (file-exists-p (concat dir marker)))
+                  root-markers)))
 
 ;; Builds a gigantic `find' shell command with -prune, -o, -not and shit.
 (defun fiplr-list-files-shell-command (type path ignored-globs)
@@ -120,7 +120,7 @@
   "Path is the base directory to recurse from."
   "Ignored-globs is an alist with keys 'directories and 'files."
   (cl-labels ((type-abbrev (assoc-type)
-                (case assoc-type
+                (cl-case assoc-type
                   ('directories "d")
                   ('files "f")))
               (name-matcher (glob)
