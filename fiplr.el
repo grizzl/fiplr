@@ -167,6 +167,76 @@
                                    ignored-globs))))
     (split-string list-string "[\r\n]+" t)))
 
+;; Create a fuzzy search index for the given set of strings.
+(defun fiplr-make-index (strings)
+  "Makes a fast lookup table from strings for use with `fiplr-index-lookup'."
+  "The index assumes that the input list ordering will not change."
+  (let ((hash-table (make-hash-table)))
+    (cl-reduce (lambda (list-offset str)
+                 (fiplr-index-insert-string str list-offset hash-table)
+                 (1+ list-offset))
+               strings
+               :initial-value 0)
+    (maphash (lambda (char str-map)
+               (maphash (lambda (list-offset locations)
+                          (puthash list-offset (reverse locations) str-map))
+                        str-map)) hash-table)
+    hash-table))
+
+;; Insert the string at list-offset into the index.
+(defun fiplr-index-insert-string (string list-offset hash-table)
+  "This is an internal function used by `fiplr-make-index'."
+  "It inserts the string stored at list-offset of the main list."
+  "An explanation of the data structure and algorithm can be found at http://link.com/."
+  (cl-reduce (lambda (char-offset char)
+               (let* ((str-map (or (gethash char hash-table)
+                                   (puthash char (make-hash-table) hash-table)))
+                      (offsets (gethash list-offset str-map)))
+                 (puthash list-offset
+                          (cons char-offset offsets)
+                          str-map)
+                 (1+ char-offset)))
+             string
+             :initial-value 0))
+
+;; Perform a fuzzy-search in the index and return a result hash.
+(defun fiplr-index-search (term index)
+  "Fuzzy searches for term in an index prepared with `fiplr-make-index'."
+  "The result format is unspecified and can be read with `fiplr-read-result'."
+  "Characters must appear in the same order, but need not be adjacent."
+  (let ((result (make-hash-table)))
+    (cl-reduce (lambda (pos char)
+                 (let ((str-map (gethash char index)))
+                   (if (> pos 0)
+                       (maphash (lambda (str-offset char-offset)
+                                  (let* ((char-offsets (gethash str-offset str-map))
+                                         (new-offset (cl-member-if (lambda (x)
+                                                                     (> x char-offset))
+                                                                char-offsets)))
+                                    (if new-offset
+                                        (puthash str-offset (car new-offset) result)
+                                      (remhash str-offset result))
+                                    result))
+                                result)
+                     (maphash (lambda (str-offset char-offsets)
+                                (puthash str-offset (car char-offsets) result))
+                              str-map))
+                   (1+ pos)))
+               term
+               :initial-value 0)
+    result))
+
+;; Extract the elements of the list that are present in the search result.
+(defun fiplr-read-result (search-result strings)
+  "Reads the elements from the list strings, which are in the search result."
+  ; FIXME: This iterates over all strings, instead of just the result keys
+  (cdr (cl-reduce (lambda (idx-and-matches str)
+                    (let ((idx (car idx-and-matches))
+                          (matches (cdr idx-and-matches)))
+                      (if (gethash idx search-result)
+                          (cons (1+ idx) (cons str matches))
+                        (cons (1+ idx) matches)))) strings :initial-value (cons 0 nil))))
+
 ;;; --- Package Export
 
 (provide 'fiplr)

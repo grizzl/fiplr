@@ -42,3 +42,11 @@
                    "./fixture/lib"
                    "./fixture/lib/sample"
                    "./fixture/spec"))))
+
+(ert-deftest index-search-test ()
+  "Test fiplr can create and fuzzy-search an index of strings."
+  (let* ((strings '("models" "controllers" "views"))
+         (index (fiplr-make-index strings))
+         (result (fiplr-index-search "oe" index))
+         (matches (fiplr-read-result result strings)))
+    (should (equal matches '("controllers" "models")))))
