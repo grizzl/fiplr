@@ -215,12 +215,12 @@
                                                                 char-offsets)))
                                     (if new-offset
                                         (puthash str-offset (car new-offset) result)
-                                      (remhash str-offset result))
-                                    result))
+                                      (remhash str-offset result))))
                                 result)
-                     (maphash (lambda (str-offset char-offsets)
-                                (puthash str-offset (car char-offsets) result))
-                              str-map))
+                     (when str-map
+                       (maphash (lambda (str-offset char-offsets)
+                                  (puthash str-offset (car char-offsets) result))
+                                str-map)))
                    (1+ pos)))
                term
                :initial-value 0)
@@ -235,7 +235,14 @@
                           (matches (cdr idx-and-matches)))
                       (if (gethash idx search-result)
                           (cons (1+ idx) (cons str matches))
-                        (cons (1+ idx) matches)))) strings :initial-value (cons 0 nil))))
+                        (cons (1+ idx) matches))))
+                  strings
+                  :initial-value (cons 0 nil))))
+
+(let* ((strings '("models" "controllers" "views"))
+       (index (fiplr-make-index strings))
+       (result (fiplr-index-search "bad" index)))
+  result)
 
 ;;; --- Package Export
 
