@@ -47,9 +47,9 @@
   "Test fiplr can create and fuzzy-search an index of strings."
   (let* ((strings '("models" "controllers" "views"))
          (index (fiplr-make-index strings)))
-    (cl-labels ((search (term)
-                  (let ((result (fiplr-index-search term index)))
-                    (fiplr-read-result result strings))))
+    (cl-flet ((search (term)
+               (let ((result (fiplr-index-search term index)))
+                 (fiplr-read-result result index))))
       (should (equal (search "oe")  '("controllers" "models")))
       (should (equal (search "iw")  '("views")))
       (should (equal (search "bad") '()))
