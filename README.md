@@ -16,11 +16,12 @@ make sure you have ido installed and loaded.
 
 ## Installation:
 
-The easiest way to install Fiplr is through ELPA + Marmalade:
+The easiest way to install Fiplr is through `package.el` +
+[Marmalade](http://marmalade-repo.org/) or [MELPA](http://melpa.milkbox.net/):
 
     M-x package-install RET fiplr RET
 
-If you're not using ELPA, just put fiplr.el on your load path and require it.
+If you're not using `package.el`, just put fiplr.el on your load path and require it.
 
     (add-to-list 'load-path "~/.emacs.d/fiplr")
     (require 'fiplr)
