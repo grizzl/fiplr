@@ -6,7 +6,7 @@
 
 (load (expand-file-name "../fiplr.el"))
 
-;(require 'fiplr)
+(require 'fiplr)
 
 (ert-deftest find-git-root-test ()
   "Test that fiplr can find the root of a project."
@@ -20,16 +20,19 @@
 
 (ert-deftest list-files-test ()
   "Test that fiplr is able to list all files in a project."
-  (should (equal (fiplr-list-files 'files "./fixture"
-                                   '((files (".#*"))
-                                     (directories (".bzr"))))
-                 '("ext/sample/sample.c"
-                   "lib/sample/version.rb"
-                   "lib/sample.rb"
-                   "README.md"
-                   "sample.gemspec"
-                   "spec/sample_spec.rb"
-                   "spec/spec_helper.rb"))))
+  (let ((files (sort (fiplr-list-files
+                      'files
+                      "./fixture"
+                      '((files (".#*"))
+                        (directories (".bzr")))) #'string-lessp)))
+        (should (equal files
+                       '("README.md"
+                         "ext/sample/sample.c"
+                         "lib/sample.rb"
+                         "lib/sample/version.rb"
+                         "sample.gemspec"
+                         "spec/sample_spec.rb"
+                         "spec/spec_helper.rb")))))
 
 (ert-deftest list-directories-test ()
   "Test that fiplr is able to list all directories in a project."
@@ -41,15 +44,3 @@
                    "lib"
                    "lib/sample"
                    "spec"))))
-
-(ert-deftest index-search-test ()
-  "Test fiplr can create and fuzzy-search an index of strings."
-  (let* ((strings '("models" "controllers" "views"))
-         (index (fiplr-make-index strings)))
-    (cl-flet ((search (term)
-               (let ((result (fiplr-index-search term index)))
-                 (fiplr-read-result result index))))
-      (should (equal (search "oe")  '("controllers" "models")))
-      (should (equal (search "iw")  '("views")))
-      (should (equal (search "bad") '()))
-      (should (equal (search "es")  '("views" "controllers" "models"))))))

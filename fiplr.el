@@ -17,28 +17,34 @@
 
 ;; Overview:
 ;;
-;; Fiplr makes it really easy to find files anywhere within your entire
-;; project. Files are located by typing just a few characters in the order in
-;; which they appear in the path, but not necessarily adjacent to one another.
+;; Fiplr makes it really use to find files anywhere within your entire project
+;; by using a cached directory tree and delegating to ido while you search the
+;; tree.
 ;;
-;; For example, if you have a file ./lib/game/leaderboards.rb, you can
-;; just run `M-x fiplr-find-file` and type `gldr` (G-ame L-ea-D-e-R-boards)
-;; and your file will be listed. Navigate between multiple matches with the
-;; left and right arrow keys and select one with the return key.
+;;   M-x fiplr-find-file
 ;;
-;; You may add multiple patterns that are order-independent of one another
-;; by using the ";" character to separate the patterns. Suppose we had typed
-;; just `ldr` in the above example and too many matches come up. Rather than
-;; backspace to add part of the directory name and narrow the search down,
-;; we can just type `;ga`. Read this like an "and" operator.
+;; By default it looks through all the parent directories of the file you're
+;; editing until it finds a .git, .hg, .bzr or .svn directory. You can
+;; customize this list of root markers by setting `fiplr-root-markers'.
+;;
+;;   (setq fiplr-root-markers '(".git" ".svn"))
+;;
+;; Some files are ignored from the directory tree because they are not text
+;; files, or simply to speed up the search. The default list can be
+;; customized by setting `fiplr-ignored-globs'.
+;;
+;;   (setq fiplr-ignored-globs '((directories (".git" ".svn"))
+;;                               (files ("*.jpg" "*.png" "*.zip" "*~"))))
+;;
+;; These globs are used by the UNIX `find' command's -name flag.
 ;;
 ;; Usage:
 ;;
-;; Run `M-x fiplr-find-file` to find files.
-;; Run `M-x fiplr-find-directory` to find directories.
-;; Run `M-x fiplr-clear-cache` to empty the file cache.
+;;   Find files:        M-x fiplr-find-file
+;;   Find directories:  M-x fiplr-find-directory
+;;   Clear caches:      M-x fiplr-clear-cache
 ;;
-;; For convenience, bind `C-x f` to `fiplr-find-file`:
+;; For convenience, bind "C-x f" to `fiplr-find-file':
 ;;
 ;;   (global-set-key (kbd "C-x f") 'fiplr-find-file)
 ;;
@@ -100,6 +106,13 @@
   "The root of the project is the return value of `fiplr-root'."
   (interactive)
   (fiplr-find-file-in-directory (fiplr-root) fiplr-ignored-globs))
+
+;; Locate a directory in the current project.
+(defun fiplr-find-directory ()
+  "Runs a completing prompt to find a directory from the project."
+  "The root of the project is the return value of `fiplr-root'."
+  (interactive)
+  (fiplr-find-directory-in-directory (fiplr-root) fiplr-ignored-globs))
 
 ;; Clear the caches.
 (defun fiplr-clear-cache ()
@@ -189,100 +202,6 @@
                      (split-string list-string "[\r\n]+" t)
                      :initial-value '()))))
 
-;; Create a fuzzy search index for the given set of strings.
-(defun fiplr-make-index (strings)
-  "Makes a fast lookup table from strings for use with `fiplr-index-lookup'."
-  "An explanation of the data structure and algorithm can be found at:"
-  "https://github.com/d11wtq/fiplr/wiki/algorithm"
-  (let ((hash-table (make-hash-table)))
-    (reduce (lambda (list-offset str)
-              (fiplr-lookup-table-insert-string str list-offset hash-table)
-              (1+ list-offset))
-            strings
-            :initial-value 0)
-    (maphash (lambda (char str-map)
-               (maphash (lambda (list-offset locations)
-                          (puthash list-offset (reverse locations) str-map))
-                        str-map)) hash-table)
-    (cons (vconcat strings) hash-table)))
-
-;; Insert the string at list-offset into the index.
-(defun fiplr-lookup-table-insert-string (string list-offset index)
-  "This is an internal function used by `fiplr-make-index'."
-  "It inserts the string stored at list-offset of the main list."
-  (reduce (lambda (char-offset char)
-            (let* ((str-map (or (gethash char index)
-                                (puthash char (make-hash-table) index)))
-                   (offsets (gethash list-offset str-map)))
-              (puthash list-offset
-                       (cons char-offset offsets)
-                       str-map)
-              (1+ char-offset)))
-          string
-          :initial-value 0))
-
-;; Get the lookup table portion of the fuzzy search index.
-(defun fiplr-get-lookup-table (index)
-  "Returns the lookup table used for fuzzy-searching."
-  "The internal structure of the index is left undefined and subject to change."
-  (cdr index))
-
-;; Get the string data set from the fuzzy search index.
-(defun fiplr-get-strings (index)
-  "Returns the vector of strings used in the index construction."
-  "The internal structure of the index is left undefined and subject to change."
-  (car index))
-
-;; Populates the results based on the first character matched.
-(defun fiplr-index-search-init (sub-table result)
-  "Used to initialize potential matches if the first char matched in search."
-  (maphash (lambda (k v)
-             (puthash k (car v) result))
-           sub-table))
-
-;; Filters down already-matching results.
-(defun fiplr-index-search-continue (sub-table result)
-  "Use the search lookup table to filter already-accumulated results."
-  (cl-flet ((next-offset (key current sub-table)
-              (first (member-if (lambda (v)
-                                  (> v current))
-                                (gethash key sub-table)))))
-    (maphash (lambda (k v)
-               (let ((offset (next-offset k v sub-table)))
-                 (if offset
-                     (puthash k offset result)
-                   (remhash k result))))
-             result)))
-
-;; Perform a fuzzy-search in the index and return a result hash.
-(defun fiplr-index-search (term index)
-  "Fuzzy searches for term in an index prepared with `fiplr-make-index'."
-  "The result format is unspecified and can be read with `fiplr-read-result'."
-  "Characters must appear in the same order, but need not be adjacent."
-  (let ((result (make-hash-table))
-        (table (fiplr-get-lookup-table index)))
-    (reduce (lambda (n ch)
-              (let ((sub-table (gethash ch table)))
-                (if (not sub-table)
-                    (clrhash result)
-                  (if (> n 0)
-                      (fiplr-index-search-continue sub-table result)
-                    (fiplr-index-search-init sub-table result)))
-                (1+ n)))
-            term
-            :initial-value 0)
-    result))
-
-;; Extract the elements of the list that are present in the search result.
-(defun fiplr-read-result (search-result index)
-  "Reads the elements from the list strings, which are in the search result."
-  (let* ((strings (fiplr-get-strings index))
-         (matches '()))
-    (maphash (lambda (string-offset _)
-               (setq matches (cons (elt strings string-offset) matches)))
-             search-result)
-    matches))
-
 ;; Runs the find file prompt for the specified path.
 (defun fiplr-find-file-in-directory (path ignored-globs)
   "Locate a file under the specified directory."
@@ -293,8 +212,23 @@
             *fiplr-file-cache*))
     (let* ((project-files (cdr (assoc root-dir *fiplr-file-cache*)))
            (prompt "Find project file: ")
-           (file (ido-completing-read prompt project-files))))
-      (find-file (concat root-dir file))))
+           (file (ido-completing-read prompt project-files)))
+      (find-file (concat root-dir file)))))
+
+;; Runs the find directory prompt for the specified path.
+(defun fiplr-find-directory-in-directory (path ignored-globs)
+  "Locate a directory under the specified directory."
+  "If the directory has been searched previously, the cache is used."
+  (let ((root-dir (file-name-as-directory path)))
+    (unless (assoc root-dir *fiplr-directory-cache*)
+      (push (cons root-dir (fiplr-list-files 'directories root-dir ignored-globs))
+            *fiplr-directory-cache*))
+    (let* ((project-dirs (cdr (assoc root-dir *fiplr-directory-cache*)))
+           (prompt "Find project directory: ")
+           (dirname (ido-completing-read prompt project-dirs)))
+      (condition-case nil
+          (dired (concat root-dir dirname))
+        (error (message (concat "Cannot open directory: " dirname)))))))
 
 (provide 'fiplr)
 
