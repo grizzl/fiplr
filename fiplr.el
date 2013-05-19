@@ -18,9 +18,8 @@
 ;; Overview:
 ;;
 ;; Fiplr makes it really easy to find files anywhere within your entire
-;; project. Files and directories are located by typing just a few characters
-;; in the order in which they appear in the path, but not necessarily adjacent
-;; to one another.
+;; project. Files are located by typing just a few characters in the order in
+;; which they appear in the path, but not necessarily adjacent to one another.
 ;;
 ;; For example, if you have a file ./lib/game/leaderboards.rb, you can
 ;; just run `M-x fiplr-find-file` and type `gldr` (G-ame L-ea-D-e-R-boards)
@@ -37,22 +36,22 @@
 ;;
 ;; Run `M-x fiplr-find-file` to find files.
 ;; Run `M-x fiplr-find-directory` to find directories.
-;; Run `M-x fiplr-find-buffer` to find open buffers.
 ;; Run `M-x fiplr-clear-cache` to empty the file cache.
 ;;
-;; Once fiplr is running:
+;; For convenience, bind `C-x f` to `fiplr-find-file`:
 ;;
-;; Switch between modes with `C-f`, `C-d` and `C-b`.
-;; Reset and reload with `C-r`.
-;; 
-;; For convenience, bind `C-p` to `fiplr-find-file`:
-;;
-;;   (global-set-key (kbd "C-p") 'fiplr-find-file)
+;;   (global-set-key (kbd "C-x f") 'fiplr-find-file)
 ;;
 
 (require 'cl)
 
 ;;; --- Package Configuration
+
+;; A cache to avoid repeat searching.
+(setq *fiplr-file-cache* '())
+
+;; A cache to avoid repeat searching.
+(setq *fiplr-directory-cache* '())
 
 ;; The default set of files/directories to look for at the root of a project.
 (defvar *fiplr-default-root-markers*
@@ -94,6 +93,20 @@
                (expand-file-name "."))))
     (or (fiplr-find-root cwd fiplr-root-markers)
         cwd)))
+
+;; Locate a file in the current project.
+(defun fiplr-find-file ()
+  "Runs a completing prompt to find a file from the project."
+  "The root of the project is the return value of `fiplr-root'."
+  (interactive)
+  (fiplr-find-file-in-directory (fiplr-root) fiplr-ignored-globs))
+
+;; Clear the caches.
+(defun fiplr-clear-cache ()
+  "Clears the internal caches used by fiplr so the project is searched again."
+  (interactive)
+  (setq *fiplr-file-cache* '())
+  (setq *fiplr-directory-cache* '()))
 
 ;;; --- Private Functions
 
@@ -162,12 +175,19 @@
 (defun fiplr-list-files (type path ignored-globs)
   "Expands to a flat list of files/directories found under path."
   "The first parameter - type - is the symbol 'directories or 'files."
-  (let ((list-string
-         (shell-command-to-string (fiplr-list-files-shell-command
-                                   type
-                                   path
-                                   ignored-globs))))
-    (split-string list-string "[\r\n]+" t)))
+  (let* ((prefix (file-name-as-directory path))
+         (prefix-length (length prefix))
+         (list-string
+          (shell-command-to-string (fiplr-list-files-shell-command
+                                    type
+                                    prefix
+                                    ignored-globs))))
+    (reverse (reduce (lambda (acc file)
+                       (if (> (length file) prefix-length)
+                           (cons (substring file prefix-length) acc)
+                         acc))
+                     (split-string list-string "[\r\n]+" t)
+                     :initial-value '()))))
 
 ;; Create a fuzzy search index for the given set of strings.
 (defun fiplr-make-index (strings)
@@ -263,6 +283,19 @@
              search-result)
     matches))
 
-;;; --- Package Export
+;; Runs the find file prompt for the specified path.
+(defun fiplr-find-file-in-directory (path ignored-globs)
+  "Locate a file under the specified directory."
+  "If the directory has been searched previously, the cache is used."
+  (let ((root-dir (file-name-as-directory path)))
+    (unless (assoc root-dir *fiplr-file-cache*)
+      (push (cons root-dir (fiplr-list-files 'files root-dir ignored-globs))
+            *fiplr-file-cache*))
+    (let* ((project-files (cdr (assoc root-dir *fiplr-file-cache*)))
+           (prompt "Find project file: ")
+           (file (ido-completing-read prompt project-files))))
+      (find-file (concat root-dir file))))
 
 (provide 'fiplr)
+
+;;; fiplr.el ends here

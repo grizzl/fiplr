@@ -6,7 +6,7 @@
 
 (load (expand-file-name "../fiplr.el"))
 
-(require 'fiplr)
+;(require 'fiplr)
 
 (ert-deftest find-git-root-test ()
   "Test that fiplr can find the root of a project."
@@ -23,25 +23,24 @@
   (should (equal (fiplr-list-files 'files "./fixture"
                                    '((files (".#*"))
                                      (directories (".bzr"))))
-                 '("./fixture/ext/sample/sample.c"
-                   "./fixture/lib/sample/version.rb"
-                   "./fixture/lib/sample.rb"
-                   "./fixture/README.md"
-                   "./fixture/sample.gemspec"
-                   "./fixture/spec/sample_spec.rb"
-                   "./fixture/spec/spec_helper.rb"))))
+                 '("ext/sample/sample.c"
+                   "lib/sample/version.rb"
+                   "lib/sample.rb"
+                   "README.md"
+                   "sample.gemspec"
+                   "spec/sample_spec.rb"
+                   "spec/spec_helper.rb"))))
 
 (ert-deftest list-directories-test ()
   "Test that fiplr is able to list all directories in a project."
   (should (equal (fiplr-list-files 'directories "./fixture"
                                    '((files (".#*"))
                                      (directories (".bzr"))))
-                 '("./fixture"
-                   "./fixture/ext"
-                   "./fixture/ext/sample"
-                   "./fixture/lib"
-                   "./fixture/lib/sample"
-                   "./fixture/spec"))))
+                 '("ext"
+                   "ext/sample"
+                   "lib"
+                   "lib/sample"
+                   "spec"))))
 
 (ert-deftest index-search-test ()
   "Test fiplr can create and fuzzy-search an index of strings."
