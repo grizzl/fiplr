@@ -89,6 +89,7 @@
 ;;; --- Public Functions
 
 ;; Defines fiplr's determination of the project root.
+;;;###autoload
 (defun fiplr-root ()
   "Locate the root of the project by walking up the directory tree."
   "The first directory containing one of fiplr-root-markers is the root."
@@ -101,6 +102,7 @@
         cwd)))
 
 ;; Locate a file in the current project.
+;;;###autoload
 (defun fiplr-find-file ()
   "Runs a completing prompt to find a file from the project."
   "The root of the project is the return value of `fiplr-root'."
@@ -108,6 +110,7 @@
   (fiplr-find-file-in-directory (fiplr-root) fiplr-ignored-globs))
 
 ;; Locate a directory in the current project.
+;;;###autoload
 (defun fiplr-find-directory ()
   "Runs a completing prompt to find a directory from the project."
   "The root of the project is the return value of `fiplr-root'."
@@ -115,6 +118,7 @@
   (fiplr-find-directory-in-directory (fiplr-root) fiplr-ignored-globs))
 
 ;; Clear the caches.
+;;;###autoload
 (defun fiplr-clear-cache ()
   "Clears the internal caches used by fiplr so the project is searched again."
   (interactive)
