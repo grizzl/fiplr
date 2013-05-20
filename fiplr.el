@@ -50,6 +50,7 @@
 ;;
 
 (require 'cl)
+(require 'fiplr-search-index)
 
 ;;; --- Package Configuration
 
@@ -66,7 +67,7 @@
 ;; The default set of patterns to exclude from searches.
 (defvar *fiplr-default-ignored-globs*
   '((directories (".git" ".svn" ".hg" ".bzr"))
-    (files (".#*" "*.so"))))
+    (files (".#*" "*~" "*.so" "*.jpg" "*.png" "*.gif" "*.pdf" "*.gz" "*.zip"))))
 
 ;; Customization group declaration.
 (defgroup fiplr nil
@@ -87,19 +88,6 @@
   :options *fiplr-default-ignored-globs*)
 
 ;;; --- Public Functions
-
-;; Defines fiplr's determination of the project root.
-;;;###autoload
-(defun fiplr-root ()
-  "Locate the root of the project by walking up the directory tree."
-  "The first directory containing one of fiplr-root-markers is the root."
-  "If no root marker is found, the current working directory is used."
-  (let ((cwd (if (buffer-file-name)
-                 (directory-file-name
-                  (file-name-directory (buffer-file-name)))
-               (file-truename "."))))
-    (or (fiplr-find-root cwd fiplr-root-markers)
-        cwd)))
 
 ;; Locate a file in the current project.
 ;;;###autoload
@@ -126,6 +114,18 @@
   (setq *fiplr-directory-cache* '()))
 
 ;;; --- Private Functions
+
+;; Defines fiplr's determination of the project root.
+(defun fiplr-root ()
+  "Locate the root of the project by walking up the directory tree."
+  "The first directory containing one of fiplr-root-markers is the root."
+  "If no root marker is found, the current working directory is used."
+  (let ((cwd (if (buffer-file-name)
+                 (directory-file-name
+                  (file-name-directory (buffer-file-name)))
+               (file-truename "."))))
+    (or (fiplr-find-root cwd fiplr-root-markers)
+        cwd)))
 
 ;; Search algorithm to find dir with .git etc.
 (defun fiplr-find-root (path root-markers)
