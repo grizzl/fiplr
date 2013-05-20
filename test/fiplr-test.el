@@ -44,3 +44,19 @@
                    "lib"
                    "lib/sample"
                    "spec"))))
+
+(ert-deftest list-files-symlinked-test ()
+  "Test that fiplr is able to understand projects at symlinked paths."
+  (let ((files (sort (fiplr-list-files
+                      'files
+                      "./fixture-symlink"
+                      '((files (".#*"))
+                        (directories (".bzr")))) #'string-lessp)))
+        (should (equal files
+                       '("README.md"
+                         "ext/sample/sample.c"
+                         "lib/sample.rb"
+                         "lib/sample/version.rb"
+                         "sample.gemspec"
+                         "spec/sample_spec.rb"
+                         "spec/spec_helper.rb")))))

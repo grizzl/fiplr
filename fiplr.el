@@ -97,7 +97,7 @@
   (let ((cwd (if (buffer-file-name)
                  (directory-file-name
                   (file-name-directory (buffer-file-name)))
-               (expand-file-name "."))))
+               (file-truename "."))))
     (or (fiplr-find-root cwd fiplr-root-markers)
         cwd)))
 
@@ -130,7 +130,7 @@
 ;; Search algorithm to find dir with .git etc.
 (defun fiplr-find-root (path root-markers)
   "Tail-recursive part of project-root."
-  (let* ((this-dir (file-name-as-directory path))
+  (let* ((this-dir (file-name-as-directory (file-truename path)))
          (parent-dir (expand-file-name (concat this-dir "..")))
          (system-root-dir (expand-file-name "/")))
     (cond
@@ -192,7 +192,7 @@
 (defun fiplr-list-files (type path ignored-globs)
   "Expands to a flat list of files/directories found under path."
   "The first parameter - type - is the symbol 'directories or 'files."
-  (let* ((prefix (file-name-as-directory path))
+  (let* ((prefix (file-name-as-directory (file-truename path)))
          (prefix-length (length prefix))
          (list-string
           (shell-command-to-string (fiplr-list-files-shell-command
