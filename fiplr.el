@@ -151,40 +151,44 @@
   "Builds the `find' command to locate all project files & directories."
   "Path is the base directory to recurse from."
   "Ignored-globs is an alist with keys 'directories and 'files."
-  (cl-labels ((type-abbrev (assoc-type)
-                (cl-case assoc-type
-                  ('directories "d")
-                  ('files "f")))
-              (name-matcher (glob)
-                (mapconcat 'identity
-                           `("-name" ,(shell-quote-argument glob))
-                           " "))
-              (grouped-name-matchers (type)
-                (mapconcat 'identity
-                           `(,(shell-quote-argument "(")
-                             ,(mapconcat #'name-matcher
-                                      (cadr (assoc type ignored-globs))
-                                      " -o ")
-                             ,(shell-quote-argument ")"))
-                           " "))
-              (matcher (assoc-type)
-                (mapconcat 'identity
-                           `(,(shell-quote-argument "(")
-                             "-type"
-                             ,(type-abbrev assoc-type)
-                             ,(grouped-name-matchers assoc-type)
-                             ,(shell-quote-argument ")"))
-                           " ")))
+  (let* ((type-abbrev
+          (lambda (assoc-type)
+            (cl-case assoc-type
+              ('directories "d")
+              ('files "f"))))
+         (name-matcher
+          (lambda (glob)
+            (mapconcat 'identity
+                       `("-name" ,(shell-quote-argument glob))
+                       " ")))
+         (grouped-name-matchers
+          (lambda (type)
+            (mapconcat 'identity
+                       `(,(shell-quote-argument "(")
+                         ,(mapconcat (lambda (v) (funcall name-matcher v))
+                                     (cadr (assoc type ignored-globs))
+                                     " -o ")
+                         ,(shell-quote-argument ")"))
+                       " ")))
+         (matcher
+          (lambda (assoc-type)
+            (mapconcat 'identity
+                       `(,(shell-quote-argument "(")
+                         "-type"
+                         ,(funcall type-abbrev assoc-type)
+                         ,(funcall grouped-name-matchers assoc-type)
+                         ,(shell-quote-argument ")"))
+                       " "))))
     (mapconcat 'identity
                `("find"
                  ,(shell-quote-argument (directory-file-name path))
-                 ,(matcher 'directories)
+                 ,(funcall matcher 'directories)
                  "-prune"
                  "-o"
                  "-not"
-                 ,(matcher 'files)
+                 ,(funcall matcher 'files)
                  "-type"
-                 ,(type-abbrev type)
+                 ,(funcall type-abbrev type)
                  "-print")
                " ")))
 
