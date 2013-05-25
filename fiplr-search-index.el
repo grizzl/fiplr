@@ -30,6 +30,8 @@
 ;; first.
 ;;
 
+(require 'cl)
+
 ;;; --- Public Functions
 
 ;; Create a fuzzy search index for the given set of strings.
@@ -49,6 +51,22 @@
                           (puthash list-offset (reverse locations) str-map))
                         str-map)) hash-table)
     (cons (vconcat strings) hash-table)))
+
+;; Prompt th user to choose an item from the index.
+;;;###autoload
+(defun fiplr-completing-read (prompt index)
+  "Use INDEX to offer fuzzy completions to the user as they type at the prompt."
+  (let ((overlay nil)
+        (index index)
+        (result (fiplr-reset-result "" nil)))
+    (minibuffer-with-setup-hook
+        (lambda ()
+          (setq overlay (make-overlay (point-min) (point-min)))
+          (add-hook 'post-command-hook
+                    'fiplr-minibuffer-post-command-hook nil t)
+          (add-hook 'minibuffer-exit-hook
+                    'fiplr-minibuffer-exit-hook nil t))
+      (read-from-minibuffer prompt))))
 
 ;; Perform a fuzzy-search in the index and return a result hash.
 ;;;###autoload
@@ -87,6 +105,33 @@
     loaded))
 
 ;;; --- Private Functions
+
+;; Handle interaction with the minibuffer during a completing read.
+(defun fiplr-minibuffer-post-command-hook ()
+  "Internal function used by fiplr-completing-read."
+  (unless (string-equal (minibuffer-contents)
+                        (fiplr-result-search-term result))
+    (setq result (fiplr-index-search (minibuffer-contents)
+                                     index
+                                     result))
+    (fiplr-display-matches result index overlay)))
+
+;; Exit hook for fiplr-completing-read.
+(defun fiplr-minibuffer-exit-hook ()
+  "Internal function used by fiplr-completing-read."
+  (delete-overlay overlay)
+  (remove-hook 'post-command-hook
+               'fiplr-minibuffer-post-command-hook t)
+  (remove-hook 'minibuffer-exit-hook
+               'flipr-minibuffer-exit-hook t))
+
+;; Show the results of a search in the overlay view in the minibuffer.
+(defun fiplr-display-matches (result index overlay)
+  "Internal function to display search results in the minibuffer."
+  (overlay-put overlay
+               'before-string
+               (format "Matches: %03d\n"
+                       (length (fiplr-read-result result index)))))
 
 ;; Prepare a blank search result.
 (defun fiplr-make-result (term matches)
@@ -156,9 +201,9 @@
 (defun fiplr-index-search-continue (sub-table result)
   "Use the search lookup table to filter already-accumulated results."
   (cl-flet ((next-offset (key current sub-table)
-              (first (member-if (lambda (v)
-                                  (> v current))
-                                (gethash key sub-table)))))
+              (find-if (lambda (v)
+                         (> v current))
+                       (gethash key sub-table))))
     (maphash (lambda (k v)
                (let ((offset (next-offset k v sub-table)))
                  (if offset

@@ -4,6 +4,7 @@
 
 ;;; --- Unit Tests
 
+(add-to-list 'load-path "..")
 (load (expand-file-name "../fiplr.el"))
 
 (require 'fiplr)
