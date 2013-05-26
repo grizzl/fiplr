@@ -57,10 +57,12 @@
 (defun fiplr-completing-read (prompt index)
   "Use INDEX to offer fuzzy completions to the user as they type at the prompt."
   (let ((overlay nil)
+        (selection 0)
         (index index)
         (result (fiplr-reset-result "" nil)))
     (minibuffer-with-setup-hook
         (lambda ()
+          (fiplr-mode t)
           (setq overlay (make-overlay (point-min) (point-min)))
           (add-hook 'post-command-hook
                     'fiplr-minibuffer-post-command-hook nil t)
@@ -106,6 +108,41 @@
 
 ;;; --- Private Functions
 
+;; Move the cursor up in the result selection overlay.
+(defun fiplr-move-selection-up ()
+  "Command to move the selection up in the result selection overlay."
+  (interactive)
+  (fiplr-set-selection (1+ selection))
+  (fiplr-display-matches))
+
+;; Move the cursor down in the result selection overlay.
+(defun fiplr-move-selection-down ()
+  "Command to move the selection down in the result selection overlay."
+  (interactive)
+  (fiplr-set-selection (1- selection))
+  (fiplr-display-matches))
+
+;; Reposition the cursor selection in the result list.
+(defun fiplr-set-selection (new-selection)
+  "Validates and sets the new cursor position in the result list."
+  (setq selection (fiplr-valid-selection new-selection))
+  (unless (= new-selection selection)
+    (beep)))
+
+(defun fiplr-valid-selection (selection)
+  (let ((max-idx (min 9 (1- (fiplr-result-match-count result)))))
+    (max 0 (min max-idx selection))))
+
+;; Define a minor mode for internal use only
+(let ((keymap (make-sparse-keymap)))
+  (define-key keymap (kbd "<up>")   'fiplr-move-selection-up)
+  (define-key keymap (kbd "<down>") 'fiplr-move-selection-down)
+  (define-minor-mode fiplr-mode
+    "Toggle the internal mode used by fiplr-completing-read (private use)."
+    nil
+    " fiplr"
+    keymap))
+
 ;; Handle interaction with the minibuffer during a completing read.
 (defun fiplr-minibuffer-post-command-hook ()
   "Internal function used by fiplr-completing-read."
@@ -113,12 +150,13 @@
                         (fiplr-result-search-term result))
     (setq result (fiplr-index-search (minibuffer-contents)
                                      index
-                                     result))
-    (fiplr-display-matches result index overlay)))
+                                     result)))
+  (fiplr-display-matches))
 
 ;; Exit hook for fiplr-completing-read.
 (defun fiplr-minibuffer-exit-hook ()
   "Internal function used by fiplr-completing-read."
+  (fiplr-mode -1)
   (delete-overlay overlay)
   (remove-hook 'post-command-hook
                'fiplr-minibuffer-post-command-hook t)
@@ -126,16 +164,30 @@
                'flipr-minibuffer-exit-hook t))
 
 ;; Show the results of a search in the overlay view in the minibuffer.
-(defun fiplr-display-matches (result index overlay)
+(defun fiplr-display-matches ()
   "Internal function to display search results in the minibuffer."
   (let* ((matches (fiplr-read-result result index))
          (page (delete-if-not 'identity (subseq matches 0 10))))
     (overlay-put overlay
                  'before-string
                  (format "%s\nTotal Found: %d\n"
-                         (mapconcat 'identity page "\n")
+                         (mapconcat 'identity (fiplr-format-list page) "\n")
                          (length matches)))
     (set-window-text-height nil (+ 2 (length page)))))
+
+;; Position the marker against the selected result.
+(defun fiplr-format-list (results)
+  "Internal function used by fiplr-display-matches."
+  (let* ((marker-pos (fiplr-valid-selection selection))
+         (idx-lst (reduce (lambda (acc s)
+                            (let* ((lst (cdr acc))
+                                   (idx (car acc))
+                                   (marker (if (= idx marker-pos) "> "
+                                             "  ")))
+                              (cons (1+ idx) (cons (concat marker s) lst))))
+                          results
+                          :initial-value (cons 0 '()))))
+    (cdr idx-lst)))
 
 ;; Prepare a blank search result.
 (defun fiplr-make-result (term matches)
@@ -166,6 +218,11 @@
 (defun fiplr-result-matches (result)
   "Returns a hash containing char offsets & Levenshtein distances for each match."
   (cdr result))
+
+;; Get the number of matches in the result.
+(defun fiplr-result-match-count (result)
+  "Returns the number of matches present in RESULT."
+  (hash-table-count (fiplr-result-matches result)))
 
 ;; Insert the string at list-offset into the index.
 (defun fiplr-lookup-table-insert-string (string list-offset index)

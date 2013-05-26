@@ -222,7 +222,7 @@
                                                       ignored-globs)))
             *fiplr-file-cache*))
     (let* ((index (cdr (assoc root-dir *fiplr-file-cache*)))
-           (prompt "Find project file: ")
+           (prompt "Find: ")
            (file (fiplr-completing-read prompt index)))
       (find-file (concat root-dir file)))))
 
