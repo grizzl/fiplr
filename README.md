@@ -1,5 +1,14 @@
 # Fiplr - Find in Project for Emacs
 
+This is a development branch, building a specialized incremental fuzzy search
+designed to work on HUGE directory trees, with realtime updating as you type.
+I'm using the Linux kernel project to get a feel for the performance, and it
+is so snappy you don't sense a lag in the slightest when typing, yet you need
+not wait for some delay to pass. The Linux kernel currently has just under 43K
+files.
+
+------------------------------------------------------------------------------
+
 Fiplr (pronounced FIP-ler, as in _Find in Project_) is an Emacs package to
 allow you to locate and open files deep within a complex directory tree,
 using fuzzy matching.
