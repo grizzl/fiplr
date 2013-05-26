@@ -39,7 +39,7 @@
 (defun fiplr-make-index (strings)
   "Makes a fast lookup table from strings for use with `fiplr-index-lookup'."
   "An explanation of the data structure and algorithm can be found at:"
-  "https://github.com/d11wtq/fiplr/wiki/algorithm"
+  "https://github.com/d11wtq/fiplr/issues/4"
   (let ((hash-table (make-hash-table)))
     (reduce (lambda (list-offset str)
               (fiplr-lookup-table-insert-string str list-offset hash-table)
@@ -128,10 +128,14 @@
 ;; Show the results of a search in the overlay view in the minibuffer.
 (defun fiplr-display-matches (result index overlay)
   "Internal function to display search results in the minibuffer."
-  (overlay-put overlay
-               'before-string
-               (format "Matches: %03d\n"
-                       (length (fiplr-read-result result index)))))
+  (let* ((matches (fiplr-read-result result index))
+         (page (delete-if-not 'identity (subseq matches 0 10))))
+    (overlay-put overlay
+                 'before-string
+                 (format "%s\nTotal Found: %d\n"
+                         (mapconcat 'identity page "\n")
+                         (length matches)))
+    (set-window-text-height nil (+ 2 (length page)))))
 
 ;; Prepare a blank search result.
 (defun fiplr-make-result (term matches)

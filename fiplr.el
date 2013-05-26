@@ -18,8 +18,8 @@
 ;; Overview:
 ;;
 ;; Fiplr makes it really use to find files anywhere within your entire project
-;; by using a cached directory tree and delegating to ido while you search the
-;; tree.
+;; by using a cached directory tree and delegating to <project not yet named>
+;; while you search the tree.
 ;;
 ;;   M-x fiplr-find-file
 ;;
@@ -216,11 +216,14 @@
   "If the directory has been searched previously, the cache is used."
   (let ((root-dir (file-name-as-directory path)))
     (unless (assoc root-dir *fiplr-file-cache*)
-      (push (cons root-dir (fiplr-list-files 'files root-dir ignored-globs))
+      (push (cons root-dir
+                  (fiplr-make-index (fiplr-list-files 'files
+                                                      root-dir
+                                                      ignored-globs)))
             *fiplr-file-cache*))
-    (let* ((project-files (cdr (assoc root-dir *fiplr-file-cache*)))
+    (let* ((index (cdr (assoc root-dir *fiplr-file-cache*)))
            (prompt "Find project file: ")
-           (file (ido-completing-read prompt project-files)))
+           (file (fiplr-completing-read prompt index)))
       (find-file (concat root-dir file)))))
 
 ;; Runs the find directory prompt for the specified path.
