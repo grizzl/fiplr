@@ -216,7 +216,8 @@ If the directory has been searched previously, the cache is used."
                                      #'fiplr-report-progress))
             *fiplr-file-cache*))
     (let* ((index (cdr (assoc root-dir *fiplr-file-cache*)))
-           (file (grizzl-completing-read "File: " index)))
+           (file (grizzl-completing-read (format "Find in %s" root-dir)
+                                         index)))
       (find-file (concat root-dir file)))))
 
 (provide 'fiplr)
