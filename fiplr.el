@@ -7,7 +7,7 @@
 ;; Version: 0.1.3
 ;; Keywords: convenience, usability, project
 
-;; This file is not part of GNU Emacs.
+;; This file is NOT part of GNU Emacs.
 
 ;;; --- License
 
@@ -18,8 +18,8 @@
 ;; Overview:
 ;;
 ;; Fiplr makes it really use to find files anywhere within your entire project
-;; by using a cached directory tree and delegating to <project not yet named>
-;; while you search the tree.
+;; by using a cached directory tree and delegating to grizzl.el while you
+;; search the tree.
 ;;
 ;;   M-x fiplr-find-file
 ;;
@@ -50,37 +50,33 @@
 ;;
 
 (require 'cl)
-(require 'fiplr-search-index)
+(require 'grizzl)
 
 ;;; --- Package Configuration
 
-;; A cache to avoid repeat searching.
-(setq *fiplr-file-cache* '())
+(defvar *fiplr-file-cache* '()
+  "Internal cache used by `fiplr-find-file'.")
 
-;; A cache to avoid repeat searching.
-(setq *fiplr-directory-cache* '())
+(defvar *fiplr-directory-cache* '()
+  "Internal cache used by `fiplr-find-directory'.")
 
-;; The default set of files/directories to look for at the root of a project.
-(defvar *fiplr-default-root-markers*
-  '(".git" ".svn" ".hg" ".bzr"))
+(defvar *fiplr-default-root-markers* '(".git" ".svn" ".hg" ".bzr")
+  "A list of files/directories to look for that mark a project root.")
 
-;; The default set of patterns to exclude from searches.
 (defvar *fiplr-default-ignored-globs*
   '((directories (".git" ".svn" ".hg" ".bzr"))
-    (files (".#*" "*~" "*.so" "*.jpg" "*.png" "*.gif" "*.pdf" "*.gz" "*.zip"))))
+    (files (".#*" "*~" "*.so" "*.jpg" "*.png" "*.gif" "*.pdf" "*.gz" "*.zip")))
+  "An alist of files and directories to exclude from searches.")
 
-;; Customization group declaration.
 (defgroup fiplr nil
   "Configuration options for fiplr - find in project.")
 
-;; Settings for project root directories.
 (defcustom fiplr-root-markers *fiplr-default-root-markers*
   "A list of files or directories that are found at the root of a project."
   :type    '(repeat string)
   :group   'fiplr
   :options *fiplr-default-root-markers*)
 
-;; Settings for files and directories that should be ignored.
 (defcustom fiplr-ignored-globs *fiplr-default-ignored-globs*
   "An alist of glob patterns to exclude from search results."
   :type    '(alist :key-type symbol :value-type (repeat string))
@@ -89,37 +85,33 @@
 
 ;;; --- Public Functions
 
-;; Locate a file in the current project.
 ;;;###autoload
 (defun fiplr-find-file ()
-  "Runs a completing prompt to find a file from the project."
-  "The root of the project is the return value of `fiplr-root'."
+  "Runs a completing prompt to find a file from the project.
+The root of the project is the return value of `fiplr-root'."
   (interactive)
   (fiplr-find-file-in-directory (fiplr-root) fiplr-ignored-globs))
 
-;; Locate a directory in the current project.
 ;;;###autoload
 (defun fiplr-find-directory ()
-  "Runs a completing prompt to find a directory from the project."
-  "The root of the project is the return value of `fiplr-root'."
+  "Runs a completing prompt to find a directory from the project.
+The root of the project is the return value of `fiplr-root'."
   (interactive)
   (fiplr-find-directory-in-directory (fiplr-root) fiplr-ignored-globs))
 
-;; Clear the caches.
 ;;;###autoload
 (defun fiplr-clear-cache ()
   "Clears the internal caches used by fiplr so the project is searched again."
   (interactive)
-  (setq *fiplr-file-cache* '())
+  (setq *fiplr-file-cache*      '())
   (setq *fiplr-directory-cache* '()))
 
 ;;; --- Private Functions
 
-;; Defines fiplr's determination of the project root.
 (defun fiplr-root ()
-  "Locate the root of the project by walking up the directory tree."
-  "The first directory containing one of fiplr-root-markers is the root."
-  "If no root marker is found, the current working directory is used."
+  "Locate the root of the project by walking up the directory tree.
+The first directory containing one of fiplr-root-markers is the root.
+If no root marker is found, the current working directory is used."
   (let ((cwd (if (buffer-file-name)
                  (directory-file-name
                   (file-name-directory (buffer-file-name)))
@@ -127,7 +119,6 @@
     (or (fiplr-find-root cwd fiplr-root-markers)
         cwd)))
 
-;; Search algorithm to find dir with .git etc.
 (defun fiplr-find-root (path root-markers)
   "Tail-recursive part of project-root."
   (let* ((this-dir (file-name-as-directory (file-truename path)))
@@ -138,7 +129,6 @@
      ((equal system-root-dir this-dir) nil)
      (t (fiplr-find-root parent-dir root-markers)))))
 
-;; Predicate looking at path for a root marker.
 (defun fiplr-root-p (path root-markers)
   "Predicate to check if the given directory is a project root."
   (let ((dir (file-name-as-directory path)))
@@ -146,11 +136,10 @@
                     (file-exists-p (concat dir marker)))
                   root-markers)))
 
-;; Builds a gigantic `find' shell command with -prune, -o, -not and shit.
 (defun fiplr-list-files-shell-command (type path ignored-globs)
-  "Builds the `find' command to locate all project files & directories."
-  "Path is the base directory to recurse from."
-  "Ignored-globs is an alist with keys 'directories and 'files."
+  "Builds the `find' command to locate all project files & directories.
+PATH is the base directory to recurse from.
+IGNORED-GLOBS is an alist with keys 'DIRECTORIES and 'FILES."
   (let* ((type-abbrev
           (lambda (assoc-type)
             (cl-case assoc-type
@@ -192,10 +181,9 @@
                  "-print")
                " ")))
 
-;; List all files found under the given path, ignoring ignored-globs.
 (defun fiplr-list-files (type path ignored-globs)
-  "Expands to a flat list of files/directories found under path."
-  "The first parameter - type - is the symbol 'directories or 'files."
+  "Expands to a flat list of files/directories found under PATH.
+The first parameter TYPE is the symbol 'DIRECTORIES or 'FILES."
   (let* ((prefix (file-name-as-directory (file-truename path)))
          (prefix-length (length prefix))
          (list-string
@@ -210,36 +198,26 @@
                      (split-string list-string "[\r\n]+" t)
                      :initial-value '()))))
 
-;; Runs the find file prompt for the specified path.
+(defun fiplr-report-progress (n total)
+  "Show the number of files processed in the message area."
+  (when (= 0 (mod n 1000))
+    (message (format "Indexed %d/%d" n total))))
+
 (defun fiplr-find-file-in-directory (path ignored-globs)
-  "Locate a file under the specified directory."
-  "If the directory has been searched previously, the cache is used."
+  "Locate a file under the specified PATH.
+If the directory has been searched previously, the cache is used."
   (let ((root-dir (file-name-as-directory path)))
     (unless (assoc root-dir *fiplr-file-cache*)
+      (message "Scanning project...")
       (push (cons root-dir
-                  (fiplr-make-index (fiplr-list-files 'files
-                                                      root-dir
-                                                      ignored-globs)))
+                  (grizzl-make-index (fiplr-list-files 'files
+                                                       root-dir
+                                                       ignored-globs)
+                                     #'fiplr-report-progress))
             *fiplr-file-cache*))
     (let* ((index (cdr (assoc root-dir *fiplr-file-cache*)))
-           (prompt "Find: ")
-           (file (fiplr-completing-read prompt index)))
+           (file (grizzl-completing-read "File: " index)))
       (find-file (concat root-dir file)))))
-
-;; Runs the find directory prompt for the specified path.
-(defun fiplr-find-directory-in-directory (path ignored-globs)
-  "Locate a directory under the specified directory."
-  "If the directory has been searched previously, the cache is used."
-  (let ((root-dir (file-name-as-directory path)))
-    (unless (assoc root-dir *fiplr-directory-cache*)
-      (push (cons root-dir (fiplr-list-files 'directories root-dir ignored-globs))
-            *fiplr-directory-cache*))
-    (let* ((project-dirs (cdr (assoc root-dir *fiplr-directory-cache*)))
-           (prompt "Find project directory: ")
-           (dirname (ido-completing-read prompt project-dirs)))
-      (condition-case nil
-          (dired (concat root-dir dirname))
-        (error (message (concat "Cannot open directory: " dirname)))))))
 
 (provide 'fiplr)
 
