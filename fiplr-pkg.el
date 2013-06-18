@@ -14,4 +14,5 @@
 ;; Licensed under the same terms as Emacs.
 
 (define-package "fiplr" "0.2.0"
-  "Fuzzy Search for Files in Projects")
+  "Fuzzy Search for Files in Projects"
+  '(("grizzl" "0.1.0")))
