@@ -41,13 +41,14 @@
 ;; Usage:
 ;;
 ;;   Find files:        M-x fiplr-find-file
-;;   Find directories:  M-x fiplr-find-directory
 ;;   Clear caches:      M-x fiplr-clear-cache
 ;;
 ;; For convenience, bind "C-x f" to `fiplr-find-file':
 ;;
 ;;   (global-set-key (kbd "C-x f") 'fiplr-find-file)
 ;;
+;; Because fiplr caches the project tree, you may sometimes wish to clear the
+;; cache while searching. Use "C-c r" to do this.
 
 (require 'cl)
 (require 'grizzl)
@@ -56,9 +57,6 @@
 
 (defvar *fiplr-file-cache* '()
   "Internal cache used by `fiplr-find-file'.")
-
-(defvar *fiplr-directory-cache* '()
-  "Internal cache used by `fiplr-find-directory'.")
 
 (defvar *fiplr-default-root-markers* '(".git" ".svn" ".hg" ".bzr")
   "A list of files/directories to look for that mark a project root.")
@@ -93,18 +91,32 @@ The root of the project is the return value of `fiplr-root'."
   (fiplr-find-file-in-directory (fiplr-root) fiplr-ignored-globs))
 
 ;;;###autoload
-(defun fiplr-find-directory ()
-  "Runs a completing prompt to find a directory from the project.
-The root of the project is the return value of `fiplr-root'."
-  (interactive)
-  (fiplr-find-directory-in-directory (fiplr-root) fiplr-ignored-globs))
-
-;;;###autoload
 (defun fiplr-clear-cache ()
   "Clears the internal caches used by fiplr so the project is searched again."
   (interactive)
-  (setq *fiplr-file-cache*      '())
-  (setq *fiplr-directory-cache* '()))
+  (setq *fiplr-file-cache* '()))
+
+;;;###autoload
+(defun fiplr-reload-list ()
+  "Clear caches and reload the file listing."
+  (interactive)
+  (when (minibufferp)
+    (exit-minibuffer))
+  (fiplr-clear-cache)
+  (fiplr-find-file))
+
+;;; --- Minor Mode Definition
+
+(defvar *fiplr-keymap* (make-sparse-keymap)
+  "Internal keymap used by the minor-mode in fiplr.")
+
+(define-key *fiplr-keymap* (kbd "C-c r")   'fiplr-reload-list)
+
+(define-minor-mode fiplr-mode
+  "Toggle the internal mode used by fiplr."
+  nil
+  " fiplr"
+  *fiplr-keymap*)
 
 ;;; --- Private Functions
 
@@ -201,24 +213,29 @@ The first parameter TYPE is the symbol 'DIRECTORIES or 'FILES."
 (defun fiplr-report-progress (n total)
   "Show the number of files processed in the message area."
   (when (= 0 (mod n 1000))
-    (message (format "Indexed %d/%d" n total))))
+    (message (format "Indexing (%d/%d)" n total))))
 
 (defun fiplr-find-file-in-directory (path ignored-globs)
   "Locate a file under the specified PATH.
 If the directory has been searched previously, the cache is used."
   (let ((root-dir (file-name-as-directory path)))
     (unless (assoc root-dir *fiplr-file-cache*)
-      (message "Scanning project...")
+      (message (format "Scanning... (%s)" root-dir))
       (push (cons root-dir
                   (grizzl-make-index (fiplr-list-files 'files
                                                        root-dir
                                                        ignored-globs)
-                                     #'fiplr-report-progress))
+                                     :progress-fn #'fiplr-report-progress))
             *fiplr-file-cache*))
     (let* ((index (cdr (assoc root-dir *fiplr-file-cache*)))
-           (file (grizzl-completing-read (format "Find in %s" root-dir)
-                                         index)))
-      (find-file (concat root-dir file)))))
+           (file (minibuffer-with-setup-hook
+                     (lambda ()
+                       (fiplr-mode 1))
+                   (grizzl-completing-read (format "Find in project (%s)" root-dir)
+                                           index))))
+      (if (eq this-command 'fiplr-reload-list) ; exited for reload
+          (fiplr-reload-list)
+        (find-file (concat root-dir file))))))
 
 (provide 'fiplr)
 

@@ -1,17 +1,10 @@
 # Fiplr - Find in Project for Emacs
 
-This is a development branch, building a specialized incremental fuzzy search
-designed to work on HUGE directory trees, with realtime updating as you type.
-I'm using the Linux kernel project to get a feel for the performance, and it
-is so snappy you don't sense a lag in the slightest when typing, yet you need
-not wait for some delay to pass. The Linux kernel currently has just under 43K
-files.
-
-------------------------------------------------------------------------------
-
 Fiplr (pronounced FIP-ler, as in _Find in Project_) is an Emacs package to
 allow you to locate and open files deep within a complex directory tree,
 using fuzzy matching.
+
+![Screenshot](http://i.imgur.com/n3EweV3.png)
 
 A key design goal is to make Fiplr really easy to use with little-to-no
 configuration, beyond a single key binding.
@@ -19,9 +12,8 @@ configuration, beyond a single key binding.
 It is heavily inspired by Vim's [ctrlp](https://github.com/kien/ctrlp.vim) and
 TextMate's Command-T.
 
-Fiplr currently requires ido, though you need not have `ido-mode` turned on.
-This means it will work in Emacs 24 or later, but in older versions you should
-make sure you have ido installed and loaded.
+Internally it uses [Grizzl](https://github.com/d11wtq/grizzl) to do the fuzzy
+searching.
 
 ## Installation:
 
@@ -30,14 +22,10 @@ The easiest way to install Fiplr is through `package.el` +
 
     M-x package-install RET fiplr RET
 
-If you're not using `package.el`, just put fiplr.el on your load path and require it.
-
-    (add-to-list 'load-path "~/.emacs.d/fiplr")
-    (require 'fiplr)
-
 ## Usage:
 
-Currently it uses ido, because that was quick to get up and running with.
+Run `fiplr-find-file` and the minibuffer will open, along with a menu of files
+in your project. Start typing and use the arrow keys to pick a file.
 
     M-x fiplr-find-file
 
@@ -58,31 +46,16 @@ These globs are used by the UNIX `find' command's -name flag.
 
 Commands:
 
-  * Find files:        <kbd>M-x</kbd> fiplr-find-file <kbd>RET</kbd>
-  * Find directories:  <kbd>M-x</kbd> fiplr-find-directory <kbd>RET</kbd>
-  * Clear caches:      <kbd>M-x</kbd> fiplr-clear-cache <kbd>RET</kbd>
+  * Find files:   <kbd>M-x</kbd> fiplr-find-file <kbd>RET</kbd>
+  * Clear caches: <kbd>M-x</kbd> fiplr-clear-cache <kbd>RET</kbd>
 
 Fiplr caches the directory tree to avoid rescanning every time it is run. You
-should use `fiplr-clear-cache` as shown above if you have added files etc.
+can reload the file list during a search by hitting <kbd>C-c r</kbd> while
+fiplr is running. You may alternatively use `fiplr-clear-cache`.
 
 For convenience, bind <kbd>C-x</kbd><kbd>f</kbd> to `fiplr-find-file`:
 
     (global-set-key (kbd "C-x f") 'fiplr-find-file)
-
-## Future Plans
-
-This version that is using ido mode is just a temporary solution. Ido doesn't
-really handle huge search lists as well as it could do, so there is work
-underway on the "no-ido" branch to perform the fuzzy searching using an index
-designed specifically for this problem (it uses a three-dimensional lookup
-table that is rapidly reduced as more characters are entered at the prompt).
-
-The user interface will remain the same, however, so this is simply an
-optimization.
-
-Secondly, I'd love to add `fiplr-apropos` which fuzzy searches all Elisp
-symbols and shows the documentation in real time, and `fiplr-find-command`
-which does the same thing for interactive command documentation.
 
 ## Copyright & Licensing
 
