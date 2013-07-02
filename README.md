@@ -18,7 +18,7 @@ searching.
 ## Installation:
 
 The easiest way to install Fiplr is through `package.el` +
-[Marmalade](http://marmalade-repo.org/) or [MELPA](http://melpa.milkbox.net/):
+[MELPA](http://melpa.milkbox.net/):
 
     M-x package-install RET fiplr RET
 
@@ -46,14 +46,15 @@ These globs are used by the UNIX `find' command's -name flag.
 
 Commands:
 
-  * Find files:   <kbd>M-x</kbd> fiplr-find-file <kbd>RET</kbd>
-  * Clear caches: <kbd>M-x</kbd> fiplr-clear-cache <kbd>RET</kbd>
+  * Find files:       <kbd>M-x</kbd> fiplr-find-file <kbd>RET</kbd>
+  * Find directories: <kbd>M-x</kbd> fiplr-find-directory <kbd>RET</kbd>
+  * Clear caches:     <kbd>M-x</kbd> fiplr-clear-cache <kbd>RET</kbd>
 
 Fiplr caches the directory tree to avoid rescanning every time it is run. You
 can reload the file list during a search by hitting <kbd>C-c r</kbd> while
 fiplr is running. You may alternatively use `fiplr-clear-cache`.
 
-For convenience, bind <kbd>C-x</kbd><kbd>f</kbd> to `fiplr-find-file`:
+For convenience, bind <kbd>C-x f</kbd> to `fiplr-find-file`:
 
     (global-set-key (kbd "C-x f") 'fiplr-find-file)
 
