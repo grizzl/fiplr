@@ -56,11 +56,8 @@
 
 ;;; --- Package Configuration
 
-(defvar *fiplr-file-cache* '()
-  "Internal cache used by `fiplr-find-file'.")
-
-(defvar *fiplr-directory-cache* '()
-  "Internal cache used by `fiplr-find-directory'.")
+(defvar *fiplr-caches* '((files) (directories))
+  "Internal caches used by fiplr.")
 
 (defvar *fiplr-default-root-markers* '(".git" ".svn" ".hg" ".bzr")
   "A list of files/directories to look for that mark a project root.")
@@ -105,8 +102,7 @@ The root of the project is the return value of `fiplr-root'."
 (defun fiplr-clear-cache ()
   "Clears the internal caches used by fiplr so the project is searched again."
   (interactive)
-  (setq *fiplr-file-cache* '())
-  (setq *fiplr-directory-cache* '()))
+  (setq *fiplr-caches* '((files) (directories))))
 
 ;;; --- Minor Mode Definition
 
@@ -256,18 +252,21 @@ If the directory has been searched previously, the cache is used."
 
 (defun fiplr-get-index (type path ignored-globs)
   "Internal function to lazily get a fiplr fuzzy search index."
-  (let ((cache (if (eq type 'files)
-                   *fiplr-file-cache*
-                 *fiplr-directory-cache*)))
-    (unless (assoc path cache)
-      (message (format "Scanning... (%s)" path))
-      (push (cons path
-                  (grizzl-make-index (fiplr-list-files type
-                                                       path
-                                                       ignored-globs)
-                                     :progress-fn #'fiplr-report-progress))
-            cache))
-    (cdr (assoc path cache))))
+  (unless (assoc path (fiplr-cache type))
+    (message (format "Scanning... (%s)" path))
+    (push (cons path
+                (grizzl-make-index (fiplr-list-files type
+                                                     path
+                                                     ignored-globs)
+                                   :progress-fn #'fiplr-report-progress))
+          (fiplr-cache type)))
+  (cdr (assoc path (fiplr-cache type))))
+
+;;; --- Private Macros
+
+(defmacro fiplr-cache (type)
+  "Get the internal cache used by fiplr for files of TYPE."
+  `(cdr (assoc ,type *fiplr-caches*)))
 
 (provide 'fiplr)
 
