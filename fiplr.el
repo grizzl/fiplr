@@ -4,7 +4,7 @@
 ;;
 ;; Author: Chris Corbyn <chris@w3style.co.uk>
 ;; URL: https://github.com/d11wtq/fiplr
-;; Version: 0.2.3
+;; Version: 0.2.4
 ;; Keywords: convenience, usability, project
 
 ;; This file is NOT part of GNU Emacs.
@@ -116,6 +116,12 @@ The root of the project is the return value of `fiplr-root'."
   nil
   " fiplr"
   *fiplr-keymap*)
+
+;;; --- Private Macros
+
+(defmacro fiplr-cache (type)
+  "Get the internal cache used by fiplr for files of TYPE."
+  `(cdr (assoc ,type *fiplr-caches*)))
 
 ;;; --- Private Functions
 
@@ -261,12 +267,6 @@ If the directory has been searched previously, the cache is used."
                                    :progress-fn #'fiplr-report-progress))
           (fiplr-cache type)))
   (cdr (assoc path (fiplr-cache type))))
-
-;;; --- Private Macros
-
-(defmacro fiplr-cache (type)
-  "Get the internal cache used by fiplr for files of TYPE."
-  `(cdr (assoc ,type *fiplr-caches*)))
 
 (provide 'fiplr)
 
