@@ -74,14 +74,28 @@
 (defcustom fiplr-root-markers *fiplr-default-root-markers*
   "A list of files or directories that are found at the root of a project."
   :type    '(repeat string)
-  :group   'fiplr
-  :options *fiplr-default-root-markers*)
+  :group   'fiplr)
 
 (defcustom fiplr-ignored-globs *fiplr-default-ignored-globs*
   "An alist of glob patterns to exclude from search results."
   :type    '(alist :key-type symbol :value-type (repeat string))
-  :group   'fiplr
-  :options *fiplr-default-ignored-globs*)
+  :group   'fiplr)
+
+(defcustom fiplr-list-files-function 'fiplr-list-files
+  "A function receiving DIR, TYPE and IGNORED, returning a list of files.
+
+DIR is the directory under which to locate files (recursively).
+TYPE is one of the symboles 'FILES or 'DIRECTORIES.
+IGNORED is an alist of glob patterns to exclude. Its keys are 'DIRECTORIES
+and 'FILES, so that entire directories can be excluded.
+
+This setting allows for cross-platform compatibility by abstracting away the
+details of locating files in a directory tree. The default uses a GNU/BSD
+compatible `find' command.
+
+This function is only invoked once, when building the search index."
+  :type    'function
+  :group   'fiplr)
 
 ;;; --- Public Functions
 
@@ -164,6 +178,7 @@ If no root marker is found, the current working directory is used."
 
 (defun fiplr-list-files-shell-command (type path ignored-globs)
   "Builds the `find' command to locate all project files & directories.
+
 PATH is the base directory to recurse from.
 IGNORED-GLOBS is an alist with keys 'DIRECTORIES and 'FILES."
   (let* ((type-abbrev
@@ -270,9 +285,10 @@ If the directory has been searched previously, the cache is used."
   (unless (assoc path (fiplr-cache type))
     (message (format "Scanning... (%s)" path))
     (push (cons path
-                (grizzl-make-index (fiplr-list-files type
-                                                     path
-                                                     ignored-globs)
+                (grizzl-make-index (funcall fiplr-list-files-function
+                                            type
+                                            path
+                                            ignored-globs)
                                    :progress-fn #'fiplr-report-progress))
           (fiplr-cache type)))
   (cdr (assoc path (fiplr-cache type))))

@@ -15,4 +15,4 @@
 
 (define-package "fiplr" "0.2.5"
   "Fuzzy Search for Files in Projects"
-  '((grizzl "0.1.0") (cl-lib "0.0.1")))
+  '((grizzl "0.1.0") (cl-lib "0.1")))
