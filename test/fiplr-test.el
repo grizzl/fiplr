@@ -4,26 +4,23 @@
 
 ;;; --- Unit Tests
 
-(add-to-list 'load-path "..")
-(load (expand-file-name "../fiplr.el"))
-
 (require 'fiplr)
 
 (ert-deftest find-git-root-test ()
   "Test that fiplr can find the root of a project."
-  (should (equal (expand-file-name "./fixture/")
-                 (fiplr-find-root "./fixture/ext/sample" '(".bzr")))))
+  (should (equal (expand-file-name "test/fixture/")
+                 (fiplr-find-root "test/fixture/ext/sample" '(".bzr")))))
 
 (ert-deftest find-non-root-test ()
   "Test that fiplr returns nil if there is no root marker"
-  (should (equal (fiplr-find-root "./fixture/ext/sample" '(".foo"))
+  (should (equal (fiplr-find-root "test/fixture/ext/sample" '(".foo"))
                  nil)))
 
 (ert-deftest list-files-test ()
   "Test that fiplr is able to list all files in a project."
   (let ((files (sort (fiplr-list-files
                       'files
-                      "./fixture"
+                      "test/fixture"
                       '((files (".#*"))
                         (directories (".bzr")))) #'string-lessp)))
         (should (equal files
@@ -37,7 +34,7 @@
 
 (ert-deftest list-directories-test ()
   "Test that fiplr is able to list all directories in a project."
-  (should (equal (fiplr-list-files 'directories "./fixture"
+  (should (equal (fiplr-list-files 'directories "test/fixture"
                                    '((files (".#*"))
                                      (directories (".bzr"))))
                  '("ext"
@@ -50,7 +47,7 @@
   "Test that fiplr is able to understand projects at symlinked paths."
   (let ((files (sort (fiplr-list-files
                       'files
-                      "./fixture-symlink"
+                      "test/fixture-symlink"
                       '((files (".#*"))
                         (directories (".bzr")))) #'string-lessp)))
         (should (equal files

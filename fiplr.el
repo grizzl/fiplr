@@ -4,7 +4,7 @@
 ;;
 ;; Author: Chris Corbyn <chris@w3style.co.uk>
 ;; URL: https://github.com/d11wtq/fiplr
-;; Version: 0.2.4
+;; Version: 0.2.5
 ;; Keywords: convenience, usability, project
 
 ;; This file is NOT part of GNU Emacs.
@@ -51,8 +51,9 @@
 ;; Because fiplr caches the project tree, you may sometimes wish to clear the
 ;; cache while searching. Use "C-c r" to do this.
 
-(require 'cl)
-(require 'grizzl)
+(eval-when-compile
+  (require 'cl-lib)
+  (require 'grizzl))
 
 ;;; --- Package Configuration
 
@@ -146,12 +147,20 @@ If no root marker is found, the current working directory is used."
      ((equal system-root-dir this-dir) nil)
      (t (fiplr-find-root parent-dir root-markers)))))
 
+(defun fiplr-anyp (pred seq)
+  "True if any value in SEQ matches PRED."
+  (catch 'found
+    (map nil (lambda (v)
+               (when (funcall pred v)
+                 (throw 'found v)))
+         seq)))
+
 (defun fiplr-root-p (path root-markers)
   "Predicate to check if the given directory is a project root."
   (let ((dir (file-name-as-directory path)))
-    (cl-member-if (lambda (marker)
-                    (file-exists-p (concat dir marker)))
-                  root-markers)))
+    (fiplr-anyp (lambda (marker)
+                  (file-exists-p (concat dir marker)))
+                root-markers)))
 
 (defun fiplr-list-files-shell-command (type path ignored-globs)
   "Builds the `find' command to locate all project files & directories.
