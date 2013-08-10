@@ -4,7 +4,7 @@
 ;;
 ;; Author: Chris Corbyn <chris@w3style.co.uk>
 ;; URL: https://github.com/d11wtq/fiplr
-;; Version: 0.2.5
+;; Version: 0.2.6
 ;; Keywords: convenience, usability, project
 
 ;; This file is NOT part of GNU Emacs.
