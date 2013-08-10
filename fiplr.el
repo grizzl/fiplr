@@ -164,10 +164,10 @@ If no root marker is found, the current working directory is used."
 (defun fiplr-anyp (pred seq)
   "True if any value in SEQ matches PRED."
   (catch 'found
-    (map nil (lambda (v)
-               (when (funcall pred v)
-                 (throw 'found v)))
-         seq)))
+    (cl-map nil (lambda (v)
+                  (when (funcall pred v)
+                    (throw 'found v)))
+            seq)))
 
 (defun fiplr-root-p (path root-markers)
   "Predicate to check if the given directory is a project root."
@@ -232,12 +232,12 @@ The first parameter TYPE is the symbol 'DIRECTORIES or 'FILES."
                                     type
                                     prefix
                                     ignored-globs))))
-    (reverse (reduce (lambda (acc file)
-                       (if (> (length file) prefix-length)
-                           (cons (substring file prefix-length) acc)
-                         acc))
-                     (split-string list-string "[\r\n]+" t)
-                     :initial-value '()))))
+    (reverse (cl-reduce (lambda (acc file)
+                          (if (> (length file) prefix-length)
+                              (cons (substring file prefix-length) acc)
+                            acc))
+                        (split-string list-string "[\r\n]+" t)
+                        :initial-value '()))))
 
 (defun fiplr-reload-list ()
   "Clear caches and reload the file listing."
