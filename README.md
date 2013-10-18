@@ -9,8 +9,7 @@ using fuzzy matching.
 A key design goal is to make Fiplr really easy to use with little-to-no
 configuration, beyond a single key binding.
 
-It is heavily inspired by Vim's [ctrlp](https://github.com/kien/ctrlp.vim) and
-TextMate's Command-T.
+It is heavily inspired by Vim's [ctrlp](https://github.com/kien/ctrlp.vim), TextMate's `Command-T`, and Sublime's `Control+P`.
 
 Internally it uses [Grizzl](https://github.com/d11wtq/grizzl) to do the fuzzy
 searching.
