@@ -282,16 +282,17 @@ If the directory has been searched previously, the cache is used."
 
 (defun fiplr-get-index (type path ignored-globs)
   "Internal function to lazily get a fiplr fuzzy search index."
-  (unless (assoc path (fiplr-cache type))
-    (message (format "Scanning... (%s)" path))
-    (push (cons path
-                (grizzl-make-index (funcall fiplr-list-files-function
-                                            type
-                                            path
-                                            ignored-globs)
-                                   :progress-fn #'fiplr-report-progress))
-          (fiplr-cache type)))
-  (cdr (assoc path (fiplr-cache type))))
+  (let ((fiplr-cache-key (cons path ignored-globs)))
+    (unless (assoc fiplr-cache-key (fiplr-cache type))
+      (message (format "Scanning... (%s)" path))
+      (push (cons fiplr-cache-key
+                  (grizzl-make-index (funcall fiplr-list-files-function
+                                              type
+                                              path
+                                              ignored-globs)
+                                     :progress-fn #'fiplr-report-progress))
+            (fiplr-cache type)))
+    (cdr (assoc fiplr-cache-key (fiplr-cache type)))))
 
 (provide 'fiplr)
 
