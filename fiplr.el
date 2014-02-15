@@ -69,7 +69,8 @@
   "An alist of files and directories to exclude from searches.")
 
 (defgroup fiplr nil
-  "Configuration options for fiplr - find in project.")
+  "Configuration options for fiplr - find in project."
+  :group 'convenience)
 
 (defcustom fiplr-root-markers *fiplr-default-root-markers*
   "A list of files or directories that are found at the root of a project."
