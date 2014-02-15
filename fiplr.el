@@ -107,11 +107,47 @@ The root of the project is the return value of `fiplr-root'."
   (fiplr-find-file-in-directory (fiplr-root) fiplr-ignored-globs))
 
 ;;;###autoload
+(defun fiplr-find-file-other-window ()
+  "Runs a completing prompt to find a file from the project.
+The root of the project is the return value of `fiplr-root'.  The
+file is opened using `find-file-other-window'."
+  (interactive)
+  (fiplr-find-file-in-directory (fiplr-root) fiplr-ignored-globs
+                                #'find-file-other-window))
+
+;;;###autoload
+(defun fiplr-find-file-other-frame ()
+  "Runs a completing prompt to find a file from the project.
+The root of the project is the return value of `fiplr-root'.  The
+file is opened using `find-file-other-frame'."
+  (interactive)
+  (fiplr-find-file-in-directory (fiplr-root) fiplr-ignored-globs
+                                #'find-file-other-frame))
+
+;;;###autoload
 (defun fiplr-find-directory ()
   "Runs a completing prompt to find a directory from the project.
 The root of the project is the return value of `fiplr-root'."
   (interactive)
   (fiplr-find-directory-in-directory (fiplr-root) fiplr-ignored-globs))
+
+;;;###autoload
+(defun fiplr-find-directory-other-window ()
+  "Runs a completing prompt to find a directory from the project.
+The root of the project is the return value of `fiplr-root'.  The
+directory is opened using `dired-other-window'."
+  (interactive)
+  (fiplr-find-directory-in-directory (fiplr-root) fiplr-ignored-globs
+                                     #'dired-other-window))
+
+;;;###autoload
+(defun fiplr-find-directory-other-frame ()
+  "Runs a completing prompt to find a directory from the project.
+The root of the project is the return value of `fiplr-root'.  The
+directory is opened using `dired-other-frame'."
+  (interactive)
+  (fiplr-find-directory-in-directory (fiplr-root) fiplr-ignored-globs
+                                     #'dired-other-frame))
 
 ;;;###autoload
 (defun fiplr-clear-cache ()
@@ -252,9 +288,12 @@ The first parameter TYPE is the symbol 'DIRECTORIES or 'FILES."
   (when (= 0 (mod n 1000))
     (message (format "Indexing (%d/%d)" n total))))
 
-(defun fiplr-find-file-in-directory (path ignored-globs)
+(defun fiplr-find-file-in-directory
+    (path ignored-globs &optional find-file-function)
   "Locate a file under the specified PATH.
-If the directory has been searched previously, the cache is used."
+If the directory has been searched previously, the cache is used.
+Use FIND-FILE-FUNCTION to open the selected file, or `find-file'
+if FIND-FILE-FUNCTION is `nil'."
   (let* ((root-dir (file-name-as-directory path))
          (index (fiplr-get-index 'files root-dir ignored-globs))
          (file (minibuffer-with-setup-hook
@@ -264,11 +303,15 @@ If the directory has been searched previously, the cache is used."
                                          index))))
     (if (eq this-command 'fiplr-reload-list) ; exited for reload
         (fiplr-reload-list)
-      (find-file (concat root-dir file)))))
+      (funcall (or find-file-function #'find-file)
+               (concat root-dir file)))))
 
-(defun fiplr-find-directory-in-directory (path ignored-globs)
+(defun fiplr-find-directory-in-directory
+    (path ignored-globs &optional dired-function)
   "Locate a directory and run dired under the specified PATH.
-If the directory has been searched previously, the cache is used."
+If the directory has been searched previously, the cache is used.
+Use DIRED-FUNCTION to open the selected file, or `dired' if
+DIRED-FUNCTION is `nil'."
   (let* ((root-dir (file-name-as-directory path))
          (index (fiplr-get-index 'directories root-dir ignored-globs))
          (dir (minibuffer-with-setup-hook
@@ -278,7 +321,7 @@ If the directory has been searched previously, the cache is used."
                                         index))))
     (if (eq this-command 'fiplr-reload-list) ; exited for reload
         (fiplr-reload-list)
-      (dired (concat root-dir dir)))))
+      (funcall (or dired-function #'dired) (concat root-dir dir)))))
 
 (defun fiplr-get-index (type path ignored-globs)
   "Internal function to lazily get a fiplr fuzzy search index."
