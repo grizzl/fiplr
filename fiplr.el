@@ -17,9 +17,9 @@
 
 ;; Overview:
 ;;
-;; Fiplr makes it really use to find files anywhere within your entire project
-;; by using a cached directory tree and delegating to grizzl.el while you
-;; search the tree.
+;; Fiplr makes it really easy to find files anywhere within your entire
+;; project by using a cached directory tree and delegating to grizzl.el
+;; while you search the tree.
 ;;
 ;;   M-x fiplr-find-file
 ;;
