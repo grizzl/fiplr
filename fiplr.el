@@ -154,7 +154,9 @@ directory is opened using `dired-other-frame'."
 (defun fiplr-clear-cache ()
   "Clears the internal caches used by fiplr so the project is searched again."
   (interactive)
-  (setq *fiplr-caches* '((files) (directories))))
+  (setq *fiplr-caches*
+        (list (list 'files)
+              (list 'directories))))
 
 ;;; --- Minor Mode Definition
 
