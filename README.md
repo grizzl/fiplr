@@ -1,5 +1,7 @@
 # Fiplr - Find in Project for Emacs
 
+**The project is deprecated in favour of [Projectile](https://github.com/bbatsov/projectile)**
+
 Fiplr (pronounced FIP-ler, as in _Find in Project_) is an Emacs package to
 allow you to locate and open files deep within a complex directory tree,
 using fuzzy matching.
