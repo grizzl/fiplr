@@ -82,6 +82,17 @@
   :type    '(alist :key-type symbol :value-type (repeat string))
   :group   'fiplr)
 
+(defcustom fiplr-use-git-list-files t
+  "Use `git ls-files' if there seems to be a git repository in the
+project root.  Otherwise use the standard find command."
+  :type    'boolean
+  :group   'fiplr)
+
+(defcustom fiplr-git-list-untracked-files t
+  "When using `git ls-files', show untracked files also."
+  :type    'boolean
+  :group   'fiplr)
+
 (defcustom fiplr-list-files-function 'fiplr-list-files
   "A function receiving DIR, TYPE and IGNORED, returning a list of files.
 
@@ -262,7 +273,23 @@ IGNORED-GLOBS is an alist with keys 'DIRECTORIES and 'FILES."
                  "-print")
                " ")))
 
+(defun fiplr-git-list-files-shell-command (type path ignored-globs)
+  "Builds the `git' command to locate all project files & directories.
+
+PATH is the base directory to recurse from.
+IGNORED-GLOBS is an alist with keys 'DIRECTORIES and 'FILES which is ignored when using git ls-files."
+  (let ((args "--exclude-standard -c")
+        (proj-root (concat "cd " (directory-file-name path) "; ")))
+    (if fiplr-git-list-untracked-files
+        (setq args (concat args "o")))
+    (concat proj-root "git ls-files " args)))
+
 (defun fiplr-list-files (type path ignored-globs)
+  (if (and fiplr-use-git-list-files (file-readable-p (concat path "/.git")))
+      (fiplr-git-list-files type path ignored-globs)
+    (fiplr-list-files type path ignored-globs)))
+
+(defun fiplr-find-list-files (type path ignored-globs)
   "Expands to a flat list of files/directories found under PATH.
 The first parameter TYPE is the symbol 'DIRECTORIES or 'FILES."
   (let* ((prefix (file-name-as-directory (file-truename path)))
@@ -278,6 +305,12 @@ The first parameter TYPE is the symbol 'DIRECTORIES or 'FILES."
                             acc))
                         (split-string list-string "[\r\n]+" t)
                         :initial-value '()))))
+
+(defun fiplr-git-list-files (type path ignored-globs)
+  (let ((list-string
+         (shell-command-to-string (fiplr-git-list-files-shell-command
+                                   type path ignored-globs))))
+        (reverse (split-string list-string "[\r\n]+" t))))
 
 (defun fiplr-reload-list ()
   "Clear caches and reload the file listing."
